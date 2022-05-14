@@ -11,7 +11,7 @@ class WideBlock(nn.Module): # 얕은 구조에서 사용. Resnet 18, 34
             nn.BatchNorm2d(num_features=in_ch),
             nn.ReLU(),
             nn.Conv2d(in_ch,out_ch,kernel_size=3,stride=stride,padding=1),
-            nn.BatchNorm2d(num_features=in_ch),
+            nn.BatchNorm2d(num_features=out_ch),
             nn.ReLU(),
             nn.Dropout(),
             nn.Conv2d(out_ch,out_ch,kernel_size=3,stride=1,padding=1))
