@@ -78,14 +78,26 @@ class WRN(nn.Module):
 def WRN_40_8():
     return WRN(40,8)
 
+def WRN_40_10():
+    return WRN(40,10)
+
+def WRN_28_8():
+    return WRN(28,8)
+
 def WRN_28_10():
     return WRN(28,10)
 
 def WRN_22_8():
     return WRN(22,8)
 
+def WRN_22_10():
+    return WRN(22,10)
+
 def WRN_16_8():
     return WRN(16,8)
+
+def WRN_16_10():
+    return WRN(16,10)
 
 
 # 모델 저장 함수

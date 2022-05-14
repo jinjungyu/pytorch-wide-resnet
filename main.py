@@ -73,9 +73,9 @@ num_batch_test = int(np.ceil(num_data_test/batch_size))
 num_epoch =  int(np.ceil(num_iteration /num_batch_train))# 64000 iteration
 
 if depth == 'all':
-    model_names = ['WRN_40_8','WRN_28_10','WRN_22_8','WRN_16_8']
+    model_names = ['WRN_40_10','WRN_28_10','WRN_22_8','WRN_16_8']
 else:
-    model_names = [f'WRN_{depth},{k}']
+    model_names = [f'WRN_{depth}_{k}']
 
 for model_name in model_names:
     ckpt_dir = os.path.join(root_dir,'checkpoint',model_name)
@@ -83,7 +83,7 @@ for model_name in model_names:
     log_dir = os.path.join(root_dir,'logs',model_name)
 
     # Model
-    net = model_name().to(device)
+    net = locals()[model_name]().to(device)
     num_params = sum(p.numel() for p in net.parameters() if p.requires_grad)
     print("{} Parameters : {}".format(model_name,num_params))
 
