@@ -60,7 +60,7 @@ class WRN(nn.Module):
         blocks = []
         for i in range(N):
             blocks.append(self.block(self.in_ch,out_c,strides[i]))
-            self.inplanes = out_c
+            self.in_ch = out_c
         return nn.Sequential(*blocks)
 
     def forward(self,x):
