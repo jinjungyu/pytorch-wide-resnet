@@ -18,7 +18,7 @@ parser.add_argument('-d','--depth',choices=['16','22','28','40','all'],required=
 parser.add_argument('-k',choices=['8','10'],required=True,help='')
 parser.add_argument('--lr',type=float,default=0.1,help='')
 parser.add_argument('--batch_size',type=int,default=128,help='')
-parser.add_argument('--num_workers',type=int,default=8,help='')
+parser.add_argument('--num_workers',type=int,default=4,help='')
 args = parser.parse_args()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -29,7 +29,7 @@ batch_size = args.batch_size
 num_workers = args.num_workers
 train_size = 45000 # 45k / 5k
 val_size = 5000
-num_iteration = 64000
+num_epoch = 200
 root_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(root_dir,'data')
 
@@ -70,7 +70,6 @@ num_data_test = len(test_dataset)
 num_batch_train = int(np.ceil(num_data_train/batch_size))
 num_batch_val = int(np.ceil(num_data_val/batch_size))
 num_batch_test = int(np.ceil(num_data_test/batch_size))
-num_epoch =  int(np.ceil(num_iteration /num_batch_train))# 64000 iteration
 
 if depth == 'all':
     model_names = ['WRN_40_10','WRN_28_10','WRN_22_8','WRN_16_8']
@@ -91,11 +90,11 @@ for model_name in model_names:
     loss_fn = torch.nn.CrossEntropyLoss()
 
     # Optimizer
-    optim = torch.optim.SGD(net.parameters(),lr=lr,momentum=0.9,weight_decay=1e-4)
-    decay_epoch = [32000,48000]
+    optim = torch.optim.SGD(net.parameters(),lr=lr,momentum=0.9,weight_decay=5e-4,nesterov=True,dampening=0)
+    decay_epoch = [60,120,160]
     step_lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optim,
                                                             decay_epoch,
-                                                            gamma=0.1)
+                                                            gamma=0.2)
 
     # Tensorboard
     writer_train = SummaryWriter(log_dir=os.path.join(log_dir,'train'))
@@ -119,14 +118,13 @@ for model_name in model_names:
         ax.imshow((inputs_*255).astype(np.uint8))
         ax.set_title(f"Prediction : {preds_} Label : {labels_}",size=15)
         return fig
-    def train(global_step):
+    def train(epoch):
         # Train
         net.train()
         loss_arr = []
         acc_arr = []
 
         for inputs,labels in train_loader:
-            global_step += 1
             inputs = inputs.to(device) # To GPU
             labels = labels.to(device) # To GPU
             outputs= net(inputs) # Forward Propagation
@@ -135,13 +133,12 @@ for model_name in model_names:
             loss = loss_fn(outputs,labels)
             loss.backward()
             optim.step()
-            step_lr_scheduler.step() # Scheduler Increase Step
             # Metric
             loss_arr.append(loss.item())
             _, preds = torch.max(outputs.data,1)
             acc_arr.append(((preds==labels).sum().item()/labels.size(0))*100)
             # Print
-            print(f"TRAIN: STEP {global_step:05d} / {total_step:05d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
+            print(f"TRAIN: EPOCH {epoch:03d} / {num_epoch:03d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
             # Tensorboard
             p = fn_diff_index(preds,labels)
             if p is not None:
@@ -149,12 +146,13 @@ for model_name in model_names:
                 labels_ = classes[labels[p]]
                 preds_ = classes[preds[p]]
                 fig = make_figure(inputs_,preds_,labels_)
-                writer_train.add_figure('Pred vs Target',fig,global_step)
-                writer_train.add_scalar('Loss',np.mean(loss_arr),global_step)
-                writer_train.add_scalar('Error',100-np.mean(acc_arr),global_step)
-                writer_train.add_scalar('Accuracy',np.mean(acc_arr),global_step)
-        return global_step
-    def valid(global_step):
+                writer_train.add_figure('Pred vs Target',fig,epoch)
+                writer_train.add_scalar('Loss',np.mean(loss_arr),epoch)
+                writer_train.add_scalar('Error',100-np.mean(acc_arr),epoch)
+                writer_train.add_scalar('Accuracy',np.mean(acc_arr),epoch)
+            step_lr_scheduler.step() # Scheduler Increase Step
+        return epoch
+    def valid(epoch):
         with torch.no_grad():
             net.eval()
             loss_arr = []
@@ -171,7 +169,7 @@ for model_name in model_names:
                 _, preds = torch.max(outputs.data,1)
                 acc_arr.append(((preds==labels).sum().item()/labels.size(0))*100)
             # Print
-            print(f"VALID: STEP {global_step:05d} / {total_step:05d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
+            print(f"VALID: EPOCH {epoch:03d} / {num_epoch:03d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
             # Tensorboard
             p = fn_diff_index(preds,labels)
             if p is not None:
@@ -179,10 +177,10 @@ for model_name in model_names:
                 labels_ = classes[labels[p]]
                 preds_ = classes[preds[p]]
                 fig = make_figure(inputs_,preds_,labels_)
-                writer_val.add_figure('Pred vs Target',fig,global_step)
-                writer_val.add_scalar('Loss',np.mean(loss_arr),global_step)
-                writer_val.add_scalar('Error',100-np.mean(acc_arr),global_step)
-                writer_val.add_scalar('Accuracy',np.mean(acc_arr),global_step)
+                writer_val.add_figure('Pred vs Target',fig,epoch)
+                writer_val.add_scalar('Loss',np.mean(loss_arr),epoch)
+                writer_val.add_scalar('Error',100-np.mean(acc_arr),epoch)
+                writer_val.add_scalar('Accuracy',np.mean(acc_arr),epoch)
     def test():
         with torch.no_grad():
             net.eval()
@@ -205,18 +203,15 @@ for model_name in model_names:
             writer_test.add_scalar('Error',100-np.mean(acc_arr))
             writer_test.add_scalar('Accuracy',np.mean(acc_arr))
 
-    # start_epoch=0
-    global_step = 0
-    total_step = num_epoch * num_batch_train # 64064
     start_time = time()
     for epoch in range(1,num_epoch+1):
-        global_step = train(global_step)
-        valid(global_step)
+        epoch = train(epoch)
+        valid(epoch)
     total_time = time() - start_time
     test()
     writer_train.add_text('Parameters',str(num_params))
     writer_train.add_text('Train Time',str(datetime.timedelta(seconds=total_time)))
-    writer_train.add_text('Average Time',f'{total_time / total_step:.2f}s')
+    writer_train.add_text('Average Time',f'{total_time / num_epoch:.2f}s')
     writer_train.close()
     writer_val.close()
     writer_test.close()

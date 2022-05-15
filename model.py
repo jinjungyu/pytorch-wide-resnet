@@ -2,11 +2,9 @@ import os
 import torch
 from torch import nn
 
-class WideBlock(nn.Module): # 얕은 구조에서 사용. Resnet 18, 34
+class WideBlock(nn.Module):
     def __init__(self,in_ch,out_ch,stride=1):
         super(WideBlock,self).__init__()
-        # stride를 통해 이미지 크기 조정
-        # 한 층의 첫 번째 블록의 시작에서 다운 샘플 (첫 번째 층 제외)
         self.residual = nn.Sequential(
             nn.BatchNorm2d(num_features=in_ch),
             nn.ReLU(),
@@ -17,7 +15,6 @@ class WideBlock(nn.Module): # 얕은 구조에서 사용. Resnet 18, 34
             nn.Conv2d(out_ch,out_ch,kernel_size=3,stride=1,padding=1))
 
         self.shortcut = nn.Sequential()
-        # stride가 1이 아니면 합 연산이 불가하므로 매핑
         if stride != 1 or in_ch != out_ch:
             self.shortcut = nn.Conv2d(in_ch,out_ch,kernel_size=1,
                                       stride=stride,padding=0)
