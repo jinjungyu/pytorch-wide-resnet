@@ -125,7 +125,7 @@ for model_name in model_names:
         loss_arr = []
         acc_arr = []
 
-        for inputs,labels in train_loader:
+        for batch,(inputs,labels) in enumerate(train_loader,start=1):
             inputs = inputs.to(device) # To GPU
             labels = labels.to(device) # To GPU
             outputs= net(inputs) # Forward Propagation
@@ -139,7 +139,7 @@ for model_name in model_names:
             _, preds = torch.max(outputs.data,1)
             acc_arr.append(((preds==labels).sum().item()/labels.size(0))*100)
             # Print
-            print(f"TRAIN: EPOCH {epoch:03d} / {num_epoch:03d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
+            print(f"TRAIN: EPOCH {epoch:03d} / {num_epoch:03d} | BATCH {batch:03d} / {num_batch_train:03d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
             # Tensorboard
             p = fn_diff_index(preds,labels)
             if p is not None:
@@ -152,14 +152,14 @@ for model_name in model_names:
                 writer_train.add_scalar('Error',100-np.mean(acc_arr),epoch)
                 writer_train.add_scalar('Accuracy',np.mean(acc_arr),epoch)
             step_lr_scheduler.step() # Scheduler Increase Step
-        return epoch
+
     def valid(epoch):
         with torch.no_grad():
             net.eval()
             loss_arr = []
             acc_arr = []
 
-            for inputs,labels in val_loader:
+            for batch,(inputs,labels) in enumerate(val_loader,start=1):
                 inputs = inputs.to(device) # To GPU
                 labels = labels.to(device) # To GPU
                 outputs= net(inputs) # Forward Propagation
@@ -169,8 +169,8 @@ for model_name in model_names:
                 loss_arr.append(loss.item())
                 _, preds = torch.max(outputs.data,1)
                 acc_arr.append(((preds==labels).sum().item()/labels.size(0))*100)
-            # Print
-            print(f"VALID: EPOCH {epoch:03d} / {num_epoch:03d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
+                # Print
+                print(f"VALID: EPOCH {epoch:03d} / {num_epoch:03d} | BATCH {batch:03d} / {num_batch_val:03d} | LOSS {np.mean(loss_arr):.4f} | ACC {np.mean(acc_arr):.2f}%")
             # Tensorboard
             p = fn_diff_index(preds,labels)
             if p is not None:
@@ -206,7 +206,7 @@ for model_name in model_names:
 
     start_time = time()
     for epoch in range(1,num_epoch+1):
-        epoch = train(epoch)
+        train(epoch)
         valid(epoch)
     total_time = time() - start_time
     test()
