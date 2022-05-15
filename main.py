@@ -19,6 +19,7 @@ parser.add_argument('-k',choices=['8','10'],required=True,help='')
 parser.add_argument('--lr',type=float,default=0.1,help='')
 parser.add_argument('--batch_size',type=int,default=128,help='')
 parser.add_argument('--num_workers',type=int,default=4,help='')
+parser.add_argument('--version',help='')
 args = parser.parse_args()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -77,9 +78,9 @@ else:
     model_names = [f'WRN_{depth}_{k}']
 
 for model_name in model_names:
-    ckpt_dir = os.path.join(root_dir,'checkpoint',model_name)
+    ckpt_dir = os.path.join(root_dir,'checkpoint',model_name+args.version)
     os.makedirs(ckpt_dir,exist_ok=True)
-    log_dir = os.path.join(root_dir,'logs',model_name)
+    log_dir = os.path.join(root_dir,'logs',model_name+args.version)
 
     # Model
     net = locals()[model_name]().to(device)
